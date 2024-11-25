@@ -217,11 +217,13 @@ def SamDiss_2DVerificationSetting(
     column.COL_LENGTH = 0.014
     column.COL_RADIUS = 0.0035
     column.CROSS_SECTION_AREA = np.pi * column.COL_RADIUS**2
-    column.PAR_RADIUS = 4.5E-6
+    column.PAR_RADIUS = kwargs.get('par_radius', 45E-6)
 
-    column.NPARTYPE = 1
+    column.NPARTYPE = kwargs.get('npartype', 1)
+    # column.PAR_TYPE_VOLFRAC_MULTIPLEX = 0
     column.COL_POROSITY = 0.37
-    column.PAR_POROSITY = 0.75
+    column.PAR_POROSITY = kwargs.get('par_porosity', 0.75)
+    column.PAR_TYPE_VOLFRAC = kwargs.get('par_type_volfrac', 1.0)
 
     column.VELOCITY = 3.45 / (100.0 * 60.0)  # 3.45 cm/min
     column.COL_DISPERSION = 5.75e-8
@@ -231,11 +233,19 @@ def SamDiss_2DVerificationSetting(
     column.PAR_SURFDIFFUSION = kwargs.get('par_surfdiffusion', 0.0)
 
     # binding parameters
-    column.nbound = 1
+    column.nbound = kwargs.get('nbound', 1)
     column.adsorption_model = kwargs.get('adsorption_model', 'LINEAR')
-    column.adsorption.is_kinetic = kwargs.get('adsorption.is_kinetic', 0)
-    column.adsorption.lin_ka = 3.55
-    column.adsorption.lin_kd = 0.1
+    if column.NPARTYPE > 1:
+        for parType in range(column.NPARTYPE):
+            groupName = 'adsorption_' + str(parType).zfill(3)
+            column[groupName].is_kinetic = kwargs['adsorption.is_kinetic'][parType]
+            column[groupName].lin_ka = kwargs['adsorption.lin_ka'][parType]
+            column[groupName].lin_kd = kwargs['adsorption.lin_kd'][parType]
+            
+    else:
+        column.adsorption.is_kinetic = kwargs.get('adsorption.is_kinetic', 0)
+        column.adsorption.lin_ka = kwargs.get('adsorption.is_kinetic', 35.5)
+        column.adsorption.lin_kd = kwargs.get('adsorption.is_kinetic', 1.0)
 
     if 'INIT_C' in kwargs:
 
@@ -261,8 +271,8 @@ def SamDiss_2DVerificationSetting(
         column.init_c = kwargs['INIT_C'](ax_coords, rad_coords)
     else:
         column.init_c = [0] * nComp
-    column.init_cp = [0] * nComp
-    column.init_q = [0] * nComp
+    column.init_cp = kwargs.get('init_cp', [0] * nComp)
+    column.init_q = kwargs.get('init_cs', [0] * nComp)
 
     column.discretization.NPAR = parNElem
     column.discretization.PAR_DISC_TYPE = ['EQUIDISTANT_PAR']

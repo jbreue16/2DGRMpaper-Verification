@@ -35,46 +35,93 @@ output_path = project_repo.output_path / "test_cadet-core" / "2D_chromatography"
 # The get_cadet_path function searches for the cadet-cli. If you want to use a specific source build, please define the path below
 cadet_path = convergence.get_cadet_path() # path to root folder of bin\cadet-cli 
 
+commit_message = f"Benchmarks for 2DGRM FV 3-zone radial inlet variance convergence"
 
+#%% We define multiple settings convering binding modes, surface diffusion and
+### multiple particle types. All settings consider three radial zones.
 
-commit_message = f"Benchmark 2DGRM FV 3-zone radial inlet variance convergence"
+# small_test is set to true to define a minimal benchmark, which can be used
+# to see if the simulations still run and see first results.
+# To run the full extensive benchmarks, this needs to be set to false.
 
+small_test = True
+rdm_debug_mode = False
+rerun_sims=True
 
-rad_inlet_profile=None
-# def rad_inlet_profile(r, r_max):
-#     return np.sin(r / r_max * np.pi) + 0.1 # r * 100 #
-#     # return 1.0 # np.sin(r / r_max * (0.5 * np.pi) + 0.25 * np.pi)
-
-setting = {
-    # 'film_diffusion' : 0.0,
+settings = [
+    { # PURE COLUMN TRANSPORT CASE
+    'film_diffusion' : 1e-15,
     # 'col_dispersion_radial' : 0.0,
-    'analytical_reference' : True, # If set to true, solution time 0.0 is ignored since its not computed by the analytical solution (CADET-Semi-Analytic)
+    'analytical_reference' : False, # If set to true, solution time 0.0 is ignored since its not computed by the analytical solution (CADET-Semi-Analytic)
     'nRadialZones' : 3,
-    'name' : '2DGRM3Zone_dynLin_1Comp', # 2DGRMsd_reqLin_1Comp # 2DGRM_dynLin_1Comp
+    'name' : '2DGRM3Zone_noBnd_1Comp',
+    'adsorption_model' : 'NONE',
+    'surface_diffusion' : 0.0
+    },
+    { # 1parType, dynamic binding, no surface diffusion
+    'analytical_reference' : False,
+    'nRadialZones' : 3,
+    'name' : '2DGRM3Zone_dynLin_1Comp',
     'adsorption_model' : 'LINEAR',
     'adsorption.is_kinetic' : 1,
-    'surface_diffusion' : 0.0 # 1e-11 # 0.0
+    'surface_diffusion' : 0.0
+    },
+    { # 1parType, req binding, no surface diffusion
+    'analytical_reference' : False,
+    'nRadialZones' : 3,
+    'name' : '2DGRM3Zone_reqLin_1Comp',
+    'adsorption_model' : 'LINEAR',
+    'adsorption.is_kinetic' : 0,
+    'surface_diffusion' : 0.0
+    },
+    { # 1parType, dynamic binding, with surface diffusion
+    'analytical_reference' : False,
+    'nRadialZones' : 3,
+    'name' : '2DGRMsd3Zone_dynLin_1Comp',
+    'adsorption_model' : 'LINEAR',
+    'adsorption.is_kinetic' : 1,
+    'surface_diffusion' : 1e-11
+    },
+    { # 1parType, req binding, with surface diffusion
+    'analytical_reference' : False,
+    'nRadialZones' : 3,
+    'name' : '2DGRMsd3Zone_reqLin_1Comp',
+    'adsorption_model' : 'LINEAR',
+    'adsorption.is_kinetic' : 0,
+    'surface_diffusion' : 1e-11
+    },
+    { # 3parType: 
+    'analytical_reference' : False,
+    'nRadialZones' : 3,
+    'name' : '2DGRM3parType3Zone_1Comp',
+    'npartype' : 2, # 4
+    'par_type_volfrac' : [0.5, 0.5] if small_test else [0.3, 0.35, 0.15, 0.2],
+    'par_radius' : [45E-6, 75E-6] if small_test else [45E-6, 75E-6, 25E-6, 60E-6],
+    'par_porosity' : [0.75, 0.7] if small_test else [0.75, 0.7, 0.8, 0.65],
+    'nbound' : [1, 1, 0, 1],
+    'init_cp' : [0.0, 0.0] if small_test else [0.0, 0.0, 0.0, 0.0],
+    'init_cs' : [0.0, 0.0] if small_test else [0.0, 0.0, 0.0, 0.0],
+    'film_diffusion' : [6.9E-6, 6E-6] if small_test else [6.9E-6, 6E-6, 6.5E-6, 6.7E-6],
+    'par_diffusion' : [5E-11, 3E-11] if small_test else [6.07E-11, 5E-11, 3E-11, 4E-11],
+    'surface_diffusion' : [5E-11, 0.0] if small_test else [1E-11, 5E-11, 0.0, 0.0],
+    'adsorption_model' : ['LINEAR', 'LINEAR'] if small_test else ['LINEAR', 'LINEAR', 'NONE', 'LINEAR'],
+    'adsorption.is_kinetic' : [0, 1] if small_test else [0, 1, 0, 0],
+    'adsorption.lin_ka' : [35.5, 4.5] if small_test else [35.5, 4.5, 0, 0.25],
+    'adsorption.lin_kd' : [1.0, 0.15] if small_test else [1.0, 0.15, 0, 1.0]
     }
+    ]
 
-rerun_sims=False
-
-with project_repo.track_results(results_commit_message=commit_message, debug=True):
+with project_repo.track_results(results_commit_message=commit_message, debug=rdm_debug_mode):
 
     os.makedirs(output_path, exist_ok=True)
     n_jobs = 1
     
     # %% Define benchmarks
     
-    # small_test is set to true to define a minimal benchmark, which can be used
-    # to see if the simulations still run and see first results.
-    # To run the full extensive benchmarks, this needs to be set to false.
-    
-    small_test = True
-    
     cadet_configs = []
     config_names = []
     include_sens = []
-    ref_files = [['ref_2DGRM3Zone_dynLin_1Comp.h5']]
+    ref_files = [] # [[ref1], [ref2]]
     unit_IDs = []
     which = []
     idas_abstol = []
@@ -86,16 +133,16 @@ with project_repo.track_results(results_commit_message=commit_message, debug=Tru
     par_discs = []
 
     
-    def fv2D_noRadFlowBenchmark(small_test=False, **kwargs):
+    def GRM2D_FV_Benchmark(small_test=False, **kwargs):
 
-        nDisc = 8 if not small_test else 6
+        nDisc = 8 if not small_test else 4
         nRadialZones=kwargs.get('nRadialZones',3)
         
         benchmark_config = {
             'cadet_config_jsons': [
                 settings_2Dchromatography.SamDiss_2DVerificationSetting(
                     radNElem=nRadialZones,
-                    rad_inlet_profile=rad_inlet_profile,
+                    rad_inlet_profile=None,
                     USE_MODIFIED_NEWTON=0, axMethod=0, **kwargs)
             ],
             'include_sens': [
@@ -135,18 +182,19 @@ with project_repo.track_results(results_commit_message=commit_message, debug=Tru
 
         return benchmark_config
     
-    # %% create benchmark configuration
+    # %% create benchmark configurations
     
-    addition = fv2D_noRadFlowBenchmark(small_test=small_test, **setting)
+    for setting in settings:
+        addition = GRM2D_FV_Benchmark(small_test=small_test, **setting)
+        
+        bench_configs.add_benchmark(
+            cadet_configs, include_sens, ref_files, unit_IDs, which,
+            idas_abstol,
+            ax_methods, ax_discs, rad_methods=rad_methods, rad_discs=rad_discs,
+            par_methods=par_methods, par_discs=par_discs,
+            addition=addition)
     
-    bench_configs.add_benchmark(
-        cadet_configs, include_sens, ref_files, unit_IDs, which,
-        idas_abstol,
-        ax_methods, ax_discs, rad_methods=rad_methods, rad_discs=rad_discs,
-        par_methods=par_methods, par_discs=par_discs,
-        addition=addition)
-
-    config_names.extend([setting['name']])
+        config_names.extend([setting['name']])
     
     # %% Run convergence analysis
     
@@ -166,6 +214,6 @@ with project_repo.track_results(results_commit_message=commit_message, debug=Tru
         par_methods=par_methods, par_discs=par_discs,
         idas_abstol=idas_abstol,
         n_jobs=n_jobs,
-        rad_inlet_profile=rad_inlet_profile,
+        rad_inlet_profile=None,
         rerun_sims=rerun_sims
     )
