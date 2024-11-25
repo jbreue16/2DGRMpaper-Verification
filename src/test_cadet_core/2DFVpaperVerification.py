@@ -46,7 +46,7 @@ commit_message = f"Benchmarks for 2DGRM FV 3-zone radial inlet variance converge
 
 small_test = True
 rdm_debug_mode = False
-rerun_sims=True
+rerun_sims = True
 
 settings = [
     { # PURE COLUMN TRANSPORT CASE
@@ -66,28 +66,30 @@ settings = [
     'adsorption.is_kinetic' : 1,
     'surface_diffusion' : 0.0
     },
-    { # 1parType, req binding, no surface diffusion
-    'analytical_reference' : False,
-    'nRadialZones' : 3,
-    'name' : '2DGRM3Zone_reqLin_1Comp',
-    'adsorption_model' : 'LINEAR',
-    'adsorption.is_kinetic' : 0,
-    'surface_diffusion' : 0.0
-    },
+    
+    # # { # 1parType, req binding, no surface diffusion
+    # # 'analytical_reference' : False,
+    # # 'nRadialZones' : 3,
+    # # 'name' : '2DGRM3Zone_reqLin_1Comp',
+    # # 'adsorption_model' : 'LINEAR',
+    # # 'adsorption.is_kinetic' : 0,
+    # # 'surface_diffusion' : 0.0
+    # # }#,
+    # { # 1parType, req binding, with surface diffusion
+    # 'analytical_reference' : False,
+    # 'nRadialZones' : 3,
+    # 'name' : '2DGRMsd3Zone_reqLin_1Comp',
+    # 'adsorption_model' : 'LINEAR',
+    # 'adsorption.is_kinetic' : 0,
+    # 'surface_diffusion' : 1e-11
+    # }#,
+    
     { # 1parType, dynamic binding, with surface diffusion
     'analytical_reference' : False,
     'nRadialZones' : 3,
     'name' : '2DGRMsd3Zone_dynLin_1Comp',
     'adsorption_model' : 'LINEAR',
     'adsorption.is_kinetic' : 1,
-    'surface_diffusion' : 1e-11
-    },
-    { # 1parType, req binding, with surface diffusion
-    'analytical_reference' : False,
-    'nRadialZones' : 3,
-    'name' : '2DGRMsd3Zone_reqLin_1Comp',
-    'adsorption_model' : 'LINEAR',
-    'adsorption.is_kinetic' : 0,
     'surface_diffusion' : 1e-11
     },
     { # 3parType: 
@@ -164,7 +166,7 @@ with project_repo.track_results(results_commit_message=commit_message, debug=rdm
                 [0]
             ],
             'ax_discs': [
-                [bench_func.disc_list(4, nDisc)]
+                [bench_func.disc_list(8, nDisc)]
             ],
             'rad_methods': [
                 [0]
