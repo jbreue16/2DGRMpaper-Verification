@@ -244,8 +244,8 @@ def SamDiss_2DVerificationSetting(
             
     else:
         column.adsorption.is_kinetic = kwargs.get('adsorption.is_kinetic', 0)
-        column.adsorption.lin_ka = kwargs.get('adsorption.is_kinetic', 35.5)
-        column.adsorption.lin_kd = kwargs.get('adsorption.is_kinetic', 1.0)
+        column.adsorption.lin_ka = kwargs.get('adsorption.lin_ka', 35.5)
+        column.adsorption.lin_kd = kwargs.get('adsorption.lin_kd', 1.0)
 
     if 'INIT_C' in kwargs:
 
@@ -359,7 +359,8 @@ def SamDiss_2DVerificationSetting(
 
     # Run the simulation on single thread
     model.solver.NTHREADS = -1
-
+    model.solver.CONSISTENT_INIT_MODE = 3
+    
     # Sections
     model.solver.sections.NSEC = 2
     model.solver.sections.SECTION_TIMES = [0.0, 10.0, 1500.0]

@@ -33,8 +33,8 @@ project_repo = ProjectRepo()
 output_path = project_repo.output_path / "test_cadet-core" / "2D_chromatography"
 
 # The get_cadet_path function searches for the cadet-cli. If you want to use a specific source build, please define the path below
-cadet_path = convergence.get_cadet_path() # path to root folder of bin\cadet-cli 
-
+# TODO We use the source build here since one bug fix is not released yet, which was added in commit 0887fcb
+cadet_path = r"C:\Users\jmbr\OneDrive\Desktop\CADET_compiled\master8_fixMulBndModeCommit_0887fcb\aRELEASE\bin\cadet-cli.exe" # convergence.get_cadet_path() # path to root folder of bin\cadet-cli 
 commit_message = f"Benchmarks for 2DGRM FV 3-zone radial inlet variance convergence"
 
 #%% We define multiple settings convering binding modes, surface diffusion and
@@ -66,24 +66,6 @@ settings = [
     'adsorption.is_kinetic' : 1,
     'surface_diffusion' : 0.0
     },
-    
-    # # { # 1parType, req binding, no surface diffusion
-    # # 'analytical_reference' : False,
-    # # 'nRadialZones' : 3,
-    # # 'name' : '2DGRM3Zone_reqLin_1Comp',
-    # # 'adsorption_model' : 'LINEAR',
-    # # 'adsorption.is_kinetic' : 0,
-    # # 'surface_diffusion' : 0.0
-    # # }#,
-    # { # 1parType, req binding, with surface diffusion
-    # 'analytical_reference' : False,
-    # 'nRadialZones' : 3,
-    # 'name' : '2DGRMsd3Zone_reqLin_1Comp',
-    # 'adsorption_model' : 'LINEAR',
-    # 'adsorption.is_kinetic' : 0,
-    # 'surface_diffusion' : 1e-11
-    # }#,
-    
     { # 1parType, dynamic binding, with surface diffusion
     'analytical_reference' : False,
     'nRadialZones' : 3,
@@ -92,20 +74,40 @@ settings = [
     'adsorption.is_kinetic' : 1,
     'surface_diffusion' : 1e-11
     },
-    { # 3parType: 
+    { # 1parType, req binding, no surface diffusion
     'analytical_reference' : False,
     'nRadialZones' : 3,
-    'name' : '2DGRM3parType3Zone_1Comp',
-    'npartype' : 2, # 4
+    'name' : '2DGRM3Zone_reqLin_1Comp',
+    'adsorption_model' : 'LINEAR',
+    'adsorption.is_kinetic' : 0,
+    'surface_diffusion' : 0.0,
+    'init_cp' : [0.0],
+    'init_cs' : [0.0]
+    },
+    { # 1parType, req binding, with surface diffusion
+    'analytical_reference' : False,
+    'nRadialZones' : 3,
+    'name' : '2DGRMsd3Zone_reqLin_1Comp',
+    'adsorption_model' : 'LINEAR',
+    'adsorption.is_kinetic' : 0,
+    'surface_diffusion' : 1e-11,
+    'init_cp' : [0.0],
+    'init_cs' : [0.0]
+    },
+    { # 4parType: 
+    'analytical_reference' : False,
+    'nRadialZones' : 3,
+    'name' : '2DGRM2parType3Zone_1Comp' if small_test else'2DGRM4parType3Zone_1Comp',
+    'npartype' : 2 if small_test else 4,
     'par_type_volfrac' : [0.5, 0.5] if small_test else [0.3, 0.35, 0.15, 0.2],
     'par_radius' : [45E-6, 75E-6] if small_test else [45E-6, 75E-6, 25E-6, 60E-6],
     'par_porosity' : [0.75, 0.7] if small_test else [0.75, 0.7, 0.8, 0.65],
     'nbound' : [1, 1, 0, 1],
     'init_cp' : [0.0, 0.0] if small_test else [0.0, 0.0, 0.0, 0.0],
-    'init_cs' : [0.0, 0.0] if small_test else [0.0, 0.0, 0.0, 0.0],
+    'init_cs' : [0.0, 0.0] if small_test else [0.0, 0.0, 0.0], # unbound component is ignored
     'film_diffusion' : [6.9E-6, 6E-6] if small_test else [6.9E-6, 6E-6, 6.5E-6, 6.7E-6],
     'par_diffusion' : [5E-11, 3E-11] if small_test else [6.07E-11, 5E-11, 3E-11, 4E-11],
-    'surface_diffusion' : [5E-11, 0.0] if small_test else [1E-11, 5E-11, 0.0, 0.0],
+    'par_surfdiffusion' : [5E-11, 0.0] if small_test else [1E-11, 5E-11, 0.0], # unbound component is ignored
     'adsorption_model' : ['LINEAR', 'LINEAR'] if small_test else ['LINEAR', 'LINEAR', 'NONE', 'LINEAR'],
     'adsorption.is_kinetic' : [0, 1] if small_test else [0, 1, 0, 0],
     'adsorption.lin_ka' : [35.5, 4.5] if small_test else [35.5, 4.5, 0, 0.25],
@@ -137,7 +139,7 @@ with project_repo.track_results(results_commit_message=commit_message, debug=rdm
     
     def GRM2D_FV_Benchmark(small_test=False, **kwargs):
 
-        nDisc = 8 if not small_test else 4
+        nDisc = 4 if small_test else 6
         nRadialZones=kwargs.get('nRadialZones',3)
         
         benchmark_config = {
@@ -166,7 +168,7 @@ with project_repo.track_results(results_commit_message=commit_message, debug=rdm
                 [0]
             ],
             'ax_discs': [
-                [bench_func.disc_list(8, nDisc)]
+                [bench_func.disc_list(4, nDisc)]
             ],
             'rad_methods': [
                 [0]
