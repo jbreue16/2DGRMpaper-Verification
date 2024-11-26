@@ -432,8 +432,6 @@ def generate_convergence_data(
     )
 
     table = table.to_dict(orient='list')
-    if commit_hash is not None:
-        table['cadet_commit'] = commit_hash
     print("Outlet convergence")
     print(table)
 
