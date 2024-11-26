@@ -139,7 +139,7 @@ with project_repo.track_results(results_commit_message=commit_message, debug=rdm
     
     def GRM2D_FV_Benchmark(small_test=False, **kwargs):
 
-        nDisc = 4 if small_test else 6
+        nDisc = 5 if small_test else 7
         nRadialZones=kwargs.get('nRadialZones',3)
         
         benchmark_config = {
