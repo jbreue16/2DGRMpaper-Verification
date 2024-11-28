@@ -45,18 +45,18 @@ commit_message = f"Benchmarks for 2DGRM FV 3-zone radial inlet variance converge
 # To run the full extensive benchmarks, this needs to be set to false.
 
 small_test = True
-rdm_debug_mode = False
+rdm_debug_mode = True
 rerun_sims = True
 
 settings = [
     { # PURE COLUMN TRANSPORT CASE
-    'film_diffusion' : 1e-15,
+    'film_diffusion' : 0.0,
     # 'col_dispersion_radial' : 0.0,
     'analytical_reference' : False, # If set to true, solution time 0.0 is ignored since its not computed by the analytical solution (CADET-Semi-Analytic)
     'nRadialZones' : 3,
     'name' : '2DGRM3Zone_noBnd_1Comp',
     'adsorption_model' : 'NONE',
-    'surface_diffusion' : 0.0
+    'par_surfdiffusion' : 0.0
     },
     { # 1parType, dynamic binding, no surface diffusion
     'analytical_reference' : False,
@@ -64,7 +64,7 @@ settings = [
     'name' : '2DGRM3Zone_dynLin_1Comp',
     'adsorption_model' : 'LINEAR',
     'adsorption.is_kinetic' : 1,
-    'surface_diffusion' : 0.0
+    'par_surfdiffusion' : 0.0
     },
     { # 1parType, dynamic binding, with surface diffusion
     'analytical_reference' : False,
@@ -72,7 +72,7 @@ settings = [
     'name' : '2DGRMsd3Zone_dynLin_1Comp',
     'adsorption_model' : 'LINEAR',
     'adsorption.is_kinetic' : 1,
-    'surface_diffusion' : 1e-11
+    'par_surfdiffusion' : 1e-11
     },
     { # 1parType, req binding, no surface diffusion
     'analytical_reference' : False,
@@ -80,7 +80,7 @@ settings = [
     'name' : '2DGRM3Zone_reqLin_1Comp',
     'adsorption_model' : 'LINEAR',
     'adsorption.is_kinetic' : 0,
-    'surface_diffusion' : 0.0,
+    'par_surfdiffusion' : 0.0,
     'init_cp' : [0.0],
     'init_cs' : [0.0]
     },
@@ -90,7 +90,7 @@ settings = [
     'name' : '2DGRMsd3Zone_reqLin_1Comp',
     'adsorption_model' : 'LINEAR',
     'adsorption.is_kinetic' : 0,
-    'surface_diffusion' : 1e-11,
+    'par_surfdiffusion' : 1e-11,
     'init_cp' : [0.0],
     'init_cs' : [0.0]
     },
