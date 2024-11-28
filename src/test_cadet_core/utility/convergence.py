@@ -752,6 +752,58 @@ def calculate_all_L1_errors(simulations, reference,
     return errors
 
 
+def calculate_all_L2_errors(simulations, reference,
+                            unit='001', which='outlet',
+                            weights=None,
+                            comps=-1):
+    """Calculate L2 errors of multiple simulations.
+
+    Parameters
+    ----------
+    simulations : np.ndarray
+        Simulations either Cadet objects or specified by h5 names.
+    reference : Cadet object or string
+        (exact) reference solution specified by Cadet object or h5 name.
+    unit : string
+        Unit ID 000-999.
+    which : string
+        Specifies the solution array of interest, i.e. outlet, bulk, ...
+    weights : np.array
+        L2 error weights
+    comps : list
+        components that are to be considered. defaults to -1,
+        i.e. all components are considered
+
+    Returns
+    -------
+    np.array
+        L2 errors.
+    """
+
+    abs_errors = np.array(calculate_all_abs_errors(
+        simulations, reference, unit, which))
+
+    if comps == -1:
+        comps = range(0, abs_errors.shape[2])
+
+    if len(abs_errors.shape) == 3:  # shape: nMethods, error domain, nComponents
+        if weights is None:
+            weights = [1.0] * abs_errors.shape[1]
+
+        errors = np.zeros((abs_errors.shape[0]))
+
+        for method_idx in range(0, abs_errors.shape[0]):
+            for comp_idx in comps:
+                errors[method_idx] += np.multiply(np.sqrt(np.sum(
+                    np.square(abs_errors[method_idx, :, comp_idx]))), weights)
+    # @todo methods und components unterscheidung
+    else:
+        raise ValueError("not implemented yet for this nMethods, nComp")
+
+    # shape: nMethods, error domain
+    return errors
+
+
 def calculate_all_min_vals(simulations, unit='001', which='outlet'):
     """Calculate minimal values of multiple simulations.
 
@@ -1699,9 +1751,30 @@ def calculate_L1_error(solution, reference=-1, weights=1.0):
     Returns
     -------
     float
-        Max Error.
+        L1 Error.
     """
     return calculate_weighted_error(solution, reference, weights)
+
+
+def calculate_L2_error(solution, reference=-1, weights=1.0):
+    """Calculate L_w error of solution.
+
+    Parameters
+    ----------
+    solution : np.array
+        Solution or errors of simulation.
+    reference : np.array
+        (exact) reference solution.
+
+    Returns
+    -------
+    float
+        L2 Error.
+    """
+    if (reference == -1):
+        return np.sqrt(np.sum(np.square(solution))) * weights
+    else:
+        return np.sqrt(np.sum(np.square(solution - reference))) * weights
 
 
 def calculate_average_error(solution, reference):
@@ -2910,6 +2983,18 @@ def convergency_table(method,
                     current_errors[d] = calculate_L1_error(
                         abs_errors[d, :], weights=delta)
 
+        elif (re.match("L2", error_types[error_type], re.IGNORECASE)
+              or re.match("L^2", error_types[error_type], re.IGNORECASE)):
+
+            table_error_name = "$L^2$"
+            for d in range(0, nDisc):
+                if abs_errors.ndim == 1:
+                    current_errors[d] = calculate_L2_error(
+                        abs_errors[d], weights=delta)
+                else:
+                    current_errors[d] = calculate_L2_error(
+                        abs_errors[d, :], weights=delta)
+
         else:
             raise ValueError(
                 "Unknown error Type " + error_type + "."
@@ -3488,6 +3573,10 @@ def recalculate_results(file_path, models,
                             )
                         )
 
+        nTimePoints = len(get_solution_times(simulation_names[0][0]))
+        
+        error_weight = 1.0/nTimePoints if kwargs.get('time_weighted_error', False) else 1.0
+        
         for m in range(0, len(ax_methods)):
 
             if len(ax_methods) > 1:
@@ -3532,7 +3621,8 @@ def recalculate_results(file_path, models,
                 header, table = convergency_table(ax_methods[m],
                                                   ax_cells_,
                                                   abs_errors[m],
-                                                  error_types=kwargs.get('error_types', ['max', 'L1']),
+                                                  delta=error_weight,
+                                                  error_types=kwargs.get('error_types', ['max', 'L1', 'L2']),
                                                   sim_names=simulation_names[m])
 
             else:
@@ -3567,7 +3657,8 @@ def recalculate_results(file_path, models,
                     aux_methods,
                     aux_cells,
                     abs_errors[m],
-                    error_types=kwargs.get('error_types', ['max', 'L1']),
+                    delta=error_weight,
+                    error_types=kwargs.get('error_types', ['max', 'L1', 'L2']),
                     sim_names=simulation_names[m],
                     full_DOFs=False,
                     transport_model=transport_model
