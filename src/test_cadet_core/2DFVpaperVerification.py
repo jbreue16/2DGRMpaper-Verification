@@ -38,6 +38,7 @@ cadet_path = convergence.get_cadet_path() # path to root folder of bin\cadet-cli
 commit_message = f"Benchmarks for 2DGRM FV 3-zone radial inlet variance convergence"
 
 use_CASEMA_reference = True
+n_jobs = -1
 
 #%% We define multiple settings convering binding modes, surface diffusion and
 ### multiple particle types. All settings consider three radial zones.
@@ -48,7 +49,7 @@ use_CASEMA_reference = True
 
 small_test = True
 rdm_debug_mode = False
-rerun_sims = False
+rerun_sims = True
 
 settings = [
     { # PURE COLUMN TRANSPORT CASE
@@ -120,7 +121,6 @@ settings = [
 with project_repo.track_results(results_commit_message=commit_message, debug=rdm_debug_mode):
 
     os.makedirs(output_path, exist_ok=True)
-    n_jobs = 1
     
     # %% Define benchmarks
     
