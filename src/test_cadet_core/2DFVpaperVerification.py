@@ -34,8 +34,10 @@ output_path = project_repo.output_path / "test_cadet-core" / "2D_chromatography"
 
 # The get_cadet_path function searches for the cadet-cli. If you want to use a specific source build, please define the path below
 # TODO We use the source build here since one bug fix is not released yet, which was added in commit 0887fcb
-cadet_path = r"C:\Users\jmbr\OneDrive\Desktop\CADET_compiled\master8_fixMulBndModeCommit_0887fcb\aRELEASE\bin\cadet-cli.exe" # convergence.get_cadet_path() # path to root folder of bin\cadet-cli 
+cadet_path = convergence.get_cadet_path() # path to root folder of bin\cadet-cli 
 commit_message = f"Benchmarks for 2DGRM FV 3-zone radial inlet variance convergence"
+
+use_CASEMA_reference = True
 
 #%% We define multiple settings convering binding modes, surface diffusion and
 ### multiple particle types. All settings consider three radial zones.
@@ -45,21 +47,21 @@ commit_message = f"Benchmarks for 2DGRM FV 3-zone radial inlet variance converge
 # To run the full extensive benchmarks, this needs to be set to false.
 
 small_test = True
-rdm_debug_mode = True
-rerun_sims = True
+rdm_debug_mode = False
+rerun_sims = False
 
 settings = [
     { # PURE COLUMN TRANSPORT CASE
     'film_diffusion' : 0.0,
     # 'col_dispersion_radial' : 0.0,
-    'analytical_reference' : False, # If set to true, solution time 0.0 is ignored since its not computed by the analytical solution (CADET-Semi-Analytic)
+    'analytical_reference' : use_CASEMA_reference, # If set to true, solution time 0.0 is ignored since its not computed by the analytical solution (CADET-Semi-Analytic)
     'nRadialZones' : 3,
     'name' : '2DGRM3Zone_noBnd_1Comp',
     'adsorption_model' : 'NONE',
     'par_surfdiffusion' : 0.0
     },
     { # 1parType, dynamic binding, no surface diffusion
-    'analytical_reference' : False,
+    'analytical_reference' : use_CASEMA_reference,
     'nRadialZones' : 3,
     'name' : '2DGRM3Zone_dynLin_1Comp',
     'adsorption_model' : 'LINEAR',
@@ -67,7 +69,7 @@ settings = [
     'par_surfdiffusion' : 0.0
     },
     { # 1parType, dynamic binding, with surface diffusion
-    'analytical_reference' : False,
+    'analytical_reference' : use_CASEMA_reference,
     'nRadialZones' : 3,
     'name' : '2DGRMsd3Zone_dynLin_1Comp',
     'adsorption_model' : 'LINEAR',
@@ -75,7 +77,7 @@ settings = [
     'par_surfdiffusion' : 1e-11
     },
     { # 1parType, req binding, no surface diffusion
-    'analytical_reference' : False,
+    'analytical_reference' : use_CASEMA_reference,
     'nRadialZones' : 3,
     'name' : '2DGRM3Zone_reqLin_1Comp',
     'adsorption_model' : 'LINEAR',
@@ -85,7 +87,7 @@ settings = [
     'init_cs' : [0.0]
     },
     { # 1parType, req binding, with surface diffusion
-    'analytical_reference' : False,
+    'analytical_reference' : use_CASEMA_reference,
     'nRadialZones' : 3,
     'name' : '2DGRMsd3Zone_reqLin_1Comp',
     'adsorption_model' : 'LINEAR',
@@ -95,14 +97,14 @@ settings = [
     'init_cs' : [0.0]
     },
     { # 4parType: 
-    'analytical_reference' : False,
+    'analytical_reference' : use_CASEMA_reference,
     'nRadialZones' : 3,
     'name' : '2DGRM2parType3Zone_1Comp' if small_test else'2DGRM4parType3Zone_1Comp',
     'npartype' : 2 if small_test else 4,
     'par_type_volfrac' : [0.5, 0.5] if small_test else [0.3, 0.35, 0.15, 0.2],
     'par_radius' : [45E-6, 75E-6] if small_test else [45E-6, 75E-6, 25E-6, 60E-6],
     'par_porosity' : [0.75, 0.7] if small_test else [0.75, 0.7, 0.8, 0.65],
-    'nbound' : [1, 1, 0, 1],
+    'nbound' : [1, 1] if small_test else [1, 1, 0, 1],
     'init_cp' : [0.0, 0.0] if small_test else [0.0, 0.0, 0.0, 0.0],
     'init_cs' : [0.0, 0.0] if small_test else [0.0, 0.0, 0.0], # unbound component is ignored
     'film_diffusion' : [6.9E-6, 6E-6] if small_test else [6.9E-6, 6E-6, 6.5E-6, 6.7E-6],
@@ -125,7 +127,16 @@ with project_repo.track_results(results_commit_message=commit_message, debug=rdm
     cadet_configs = []
     config_names = []
     include_sens = []
-    ref_files = [] # [[ref1], [ref2]]
+    if use_CASEMA_reference:
+        ref_files = [['/../../../data/CASEMA_reference/ref_2DGRM3Zone_noBnd_1Comp_radZ3.h5'],
+                     ['/../../../data/CASEMA_reference/ref_2DGRM3Zone_dynLin_1Comp_radZ3.h5'],
+                     ['/../../../data/CASEMA_reference/ref_2DGRM3Zone_reqLin_1Comp_radZ3.h5'],
+                     ['/../../../data/CASEMA_reference/ref_2DGRMsd3Zone_dynLin_1Comp_radZ3.h5'],
+                     ['/../../../data/CASEMA_reference/ref_2DGRMsd3Zone_reqLin_1Comp_radZ3.h5'],
+                     ['/../../../data/CASEMA_reference/ref_2DGRM2parType3Zone_1Comp_radZ3.h5'] if small_test else ['/../../../data/CASEMA_reference/ref_2DGRM4parType3Zone_1Comp_radZ3.h5']
+                     ]
+    else:
+        ref_files = []
     unit_IDs = []
     which = []
     idas_abstol = []
@@ -135,12 +146,13 @@ with project_repo.track_results(results_commit_message=commit_message, debug=rdm
     rad_discs = []
     par_methods = []
     par_discs = []
+    refinement_IDs = []
 
     
     def GRM2D_FV_Benchmark(small_test=False, **kwargs):
 
         nDisc = 5 if small_test else 7
-        nRadialZones=kwargs.get('nRadialZones',3)
+        nRadialZones=kwargs.get('nRadialZones', 3)
         
         benchmark_config = {
             'cadet_config_jsons': [
@@ -155,11 +167,14 @@ with project_repo.track_results(results_commit_message=commit_message, debug=rdm
             'ref_files': [
                 [None]
             ],
-            'unit_IDs': [
+            'refinement_ID': [
                 '000'
             ],
+            'unit_IDs': [
+                str(nRadialZones + 1).zfill(3) if kwargs.get('analytical_reference', 0) else '000'
+            ],
             'which': [
-                'radial_outlet' # radial_outlet # outlet_port_000
+                'outlet' if kwargs.get('analytical_reference', 0) else 'radial_outlet' # outlet_port_000
             ],
             'idas_abstol': [
                 [1e-10]
@@ -196,6 +211,7 @@ with project_repo.track_results(results_commit_message=commit_message, debug=rdm
             idas_abstol,
             ax_methods, ax_discs, rad_methods=rad_methods, rad_discs=rad_discs,
             par_methods=par_methods, par_discs=par_discs,
+            refinement_IDs=refinement_IDs,
             addition=addition)
     
         config_names.extend([setting['name']])
@@ -219,5 +235,7 @@ with project_repo.track_results(results_commit_message=commit_message, debug=rdm
         idas_abstol=idas_abstol,
         n_jobs=n_jobs,
         rad_inlet_profile=None,
-        rerun_sims=rerun_sims
+        rerun_sims=rerun_sims,
+        refinement_IDs=refinement_IDs,
+        analytical_reference=settings[0].get('analytical_reference', False)
     )
