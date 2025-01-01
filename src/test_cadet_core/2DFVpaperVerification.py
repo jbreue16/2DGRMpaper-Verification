@@ -37,7 +37,7 @@ output_path = project_repo.output_path / "test_cadet-core" / "2D_chromatography"
 cadet_path = convergence.get_cadet_path() # path to root folder of bin\cadet-cli 
 commit_message = f"Benchmarks for 2DGRM FV 3-zone radial inlet variance convergence"
 
-use_CASEMA_reference = True
+use_CASEMA_reference = False
 n_jobs = -1
 
 #%% We define multiple settings convering binding modes, surface diffusion and
