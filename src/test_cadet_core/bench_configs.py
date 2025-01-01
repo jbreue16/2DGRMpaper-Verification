@@ -847,6 +847,7 @@ def add_benchmark(cadet_config_jsons, include_sens, ref_files, unit_IDs, which,
                   idas_abstol, ax_methods, ax_discs,
                   par_methods=None, par_discs=None,
                   rad_methods=None, rad_discs=None,
+                  refinement_IDs=None,
                   addition=None):
 
     if addition is None:
@@ -866,3 +867,6 @@ def add_benchmark(cadet_config_jsons, include_sens, ref_files, unit_IDs, which,
     if rad_methods is not None:
         rad_methods.extend(addition['rad_methods'])
         rad_discs.extend(addition['rad_discs'])
+    if refinement_IDs is not None:
+        if 'refinement_ID' in addition.keys():
+            refinement_IDs.extend(addition['refinement_ID'])

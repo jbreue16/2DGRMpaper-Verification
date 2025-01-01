@@ -248,12 +248,14 @@ def create_object_from_config(
                                               unit_id]['discretization']['RAD_NELEM'] = rad_cells
 
             if kwargs.get('rad_inlet_profile', None) is None:
-                # if we have more than 2 units (ie more than 1 inlet), there are radial zones defined
+                # if we have more than 1 inlet, there are radial zones defined
                 n_units = config_data['input']['model']['nunits']
-                add_inlet_per_port = n_units - 1 if n_units > 2 else False
+                nInlets = n_units - 2 if kwargs.get('analytical_reference', 0) else n_units - 1
+                add_inlet_per_port = nInlets if nInlets > 2 else False
             else:
                 add_inlet_per_port = kwargs.get('rad_inlet_profile')
-                n_units = (rad_method + 1 ) * rad_cells + 1
+                nOutlets = 1 if kwargs.get('analytical_reference', 0) else 0
+                n_units = (rad_method + 1 ) * rad_cells + 1 + nOutlets
             config_data['input']['model'].nunits = n_units
                 
             connections, rad_coords = settings_2Dchromatography.generate_connections_matrix(
@@ -264,7 +266,7 @@ def create_object_from_config(
                                                        unit_id].COL_POROSITY,
                 col_radius=config_data['input']['model']['unit_' +
                                                          unit_id].COL_RADIUS,
-                add_inlet_per_port=add_inlet_per_port, add_outlet_per_port=False
+                add_inlet_per_port=add_inlet_per_port, add_outlet=int(kwargs.get('analytical_reference', 0))
             )
 
             if add_inlet_per_port is True:
@@ -621,6 +623,13 @@ def run_convergence_analysis_from_configs(
 
     commit_hash = None
 
+    if 'refinement_IDs' not in kwargs.keys():
+        refinement_IDs = unit_IDs
+    elif kwargs['refinement_IDs'] == []:
+        refinement_IDs = unit_IDs
+    else:
+        refinement_IDs = kwargs['refinement_IDs']
+
     if rerun_sims:
         # Create simulation objects
         sims = []  # To be filled with all Cadet objects
@@ -646,7 +655,7 @@ def run_convergence_analysis_from_configs(
                         create_object_from_config(
                             config_data=cadet_configs[modelIdx],
                             setting_name=cadet_config_names[modelIdx],
-                            unit_id=unit_IDs[modelIdx],
+                            unit_id=refinement_IDs[modelIdx],
                             ax_method=ax_methods[modelIdx][methodIdx],
                             ax_cells=ax_discs[modelIdx][methodIdx][discIdx],
                             par_method=par_method, par_cells=par_cells,
