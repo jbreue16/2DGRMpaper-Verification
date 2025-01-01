@@ -92,7 +92,7 @@ def lgl_nodes_weights(poly_deg):
 
 def generate_connections_matrix(rad_method, rad_cells,
                                 velocity, porosity, col_radius,
-                                add_inlet_per_port=True, add_outlet_per_port=False):
+                                add_inlet_per_port=True, add_outlet=False):
     """Computes the connections matrix with const. velocity flow rates, and radial coordinates.
     Equidistant cell/element spacing is assumed.
     
@@ -109,7 +109,7 @@ def generate_connections_matrix(rad_method, rad_cells,
 
     nRadPoints = (rad_method + 1) * rad_cells
 
-    # we want the same velocity in each radial zone and use an equidistant radial grid, ie we adjust the volumetric flow rate accordingly in each port
+    # we want the same velocity within each radial zone and use an equidistant radial grid, ie we adjust the volumetric flow rate accordingly in each port
     # 1. compute cross sections
 
     subcellCrossSectionAreas = []
@@ -165,15 +165,15 @@ def generate_connections_matrix(rad_method, rad_cells,
             zone = int(rad / (nRadPoints / nRadialZones))
             connections += [zone + 1, columnIdx,
                             0, rad, -1, -1, flowRates[rad]]
+            if add_outlet:
+                connections += [columnIdx, nRadialZones + 1 + zone,
+                                rad, 0, -1, -1, flowRates[rad]]
     else:
         for rad in range(nRadPoints):
             connections += [1, columnIdx, 0, rad, -1, -1, flowRates[rad]]
-
-    if add_outlet_per_port:
-
-        for rad in range(nRadPoints):
-            connections += [columnIdx, rad + nRadPoints,
-                            rad, 0, -1, -1, flowRates[rad]]
+            if add_outlet:
+                connections += [columnIdx, nRadPoints + 1 + rad,
+                                rad, 0, -1, -1, flowRates[rad]]
     return connections, rad_coords
 
 # =============================================================================
@@ -204,6 +204,7 @@ def SamDiss_2DVerificationSetting(
     nRadPoints = (radMethod + 1) * radNElem
     nInlets = max(1, nRadialZones) if kwargs.get(
         'rad_inlet_profile', None) is None else nRadPoints
+    nOutlets = kwargs.get('analytical_reference', 0)
 
     column = Dict()
 
@@ -315,13 +316,12 @@ def SamDiss_2DVerificationSetting(
     inletUnit.NCOMP = nComp
     inletUnit.sec_000.CONST_COEFF = [kwargs.get('INLET_CONST', 1.0)] * nComp
     inletUnit.sec_001.CONST_COEFF = [0.0] * nComp
-
     inletUnit.ports = 1
-
+    
     # define cadet model using the unit-dicts above
     model = Dict()
 
-    model.model.nunits = 1 + nInlets
+    model.model.nunits = 1 + nInlets + nOutlets
 
     # Store solution
     model['return'].split_components_data = 0
@@ -358,7 +358,7 @@ def SamDiss_2DVerificationSetting(
     model.model.solver.SCHUR_SAFETY = 1e-8
 
     # Run the simulation on single thread
-    model.solver.NTHREADS = -1
+    model.solver.NTHREADS = 1
     model.solver.CONSISTENT_INIT_MODE = 3
     
     # Sections
@@ -370,7 +370,7 @@ def SamDiss_2DVerificationSetting(
         connections, rad_coords = generate_connections_matrix(
             rad_method=radMethod, rad_cells=radNElem,
             velocity=column.VELOCITY, porosity=column.COL_POROSITY, col_radius=column.COL_RADIUS,
-            add_inlet_per_port=nInlets, add_outlet_per_port=False
+            add_inlet_per_port=nInlets, add_outlet=int(kwargs.get('analytical_reference', 0))
         )
 
     else:
@@ -378,6 +378,10 @@ def SamDiss_2DVerificationSetting(
         connections = [1, 0, -1, -1, Q]
         rad_coords = [column.COL_RADIUS / 2.0]
 
+    outletUnit = Dict()
+    outletUnit.UNIT_TYPE = 'OUTLET'
+    outletUnit.NCOMP = nComp
+            
     # Set units
     model.model['unit_000'] = column
     model.model['unit_001'] = copy.deepcopy(inletUnit)
@@ -391,6 +395,9 @@ def SamDiss_2DVerificationSetting(
             model.model['unit_' + str(rad + 1).zfill(
                 3)].sec_000.CONST_COEFF = float(rad + 1) if nRadialZones > 0 else 0.0
 
+            model.model['unit_' + str(nRadialZones + 1 + rad).zfill(3)] = copy.deepcopy(outletUnit)
+            model['return']['unit_' + str(nRadialZones + 1 + rad).zfill(3)] = model['return']['unit_000']
+
     else:
         for rad in range(nRadPoints):
 
@@ -399,6 +406,9 @@ def SamDiss_2DVerificationSetting(
 
             model.model['unit_' + str(rad + 1).zfill(
                 3)].sec_000.CONST_COEFF = [kwargs['rad_inlet_profile'](rad_coords[rad], column.COL_RADIUS)] * nComp
+
+            model.model['unit_' + str(nRadPoints + 1 + rad).zfill(3)] = copy.deepcopy(outletUnit)
+            model['return']['unit_' + str(nRadPoints + 1 + rad).zfill(3)] = model['return']['unit_000']
 
     model.model.connections.NSWITCHES = 1
     model.model.connections.switch_000.SECTION = 0
