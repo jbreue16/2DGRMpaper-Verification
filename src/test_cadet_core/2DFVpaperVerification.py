@@ -2,6 +2,11 @@
 """
 Created on Nov 2024
 
+This file contains the software verification code for the FV implementation of
+the 2DGRM. The results of this convergence analysis are published in Rao et al.
+    'Two-dimensional general rate model with particle size distribution in CADET
+    calibrated with high-definition CFD simulated intra-column data' (2025)
+
 @author: jmbr
 """
 
@@ -20,6 +25,7 @@ from cadetrdm import ProjectRepo
 
 import bench_func
 import bench_configs
+import utility.convergence as convergence
 
 import settings_2Dchromatography
 
@@ -37,11 +43,8 @@ output_path = project_repo.output_path / "test_cadet-core" / "2D_chromatography"
 cadet_path = convergence.get_cadet_path() # path to root folder of bin\cadet-cli 
 commit_message = f"Benchmarks for 2DGRM FV 3-zone radial inlet variance convergence"
 
-use_CASEMA_reference = False
+use_CASEMA_reference = True
 n_jobs = -1
-
-#%% We define multiple settings convering binding modes, surface diffusion and
-### multiple particle types. All settings consider three radial zones.
 
 # small_test is set to true to define a minimal benchmark, which can be used
 # to see if the simulations still run and see first results.
@@ -50,6 +53,12 @@ n_jobs = -1
 small_test = True
 rdm_debug_mode = False
 rerun_sims = True
+
+#%% We define multiple settings convering binding modes, surface diffusion and
+### multiple particle types. All settings consider three radial zones.
+
+nRadialZones = 3
+target_zone = 0 # only required for analytical solution: Here, we only consider the solution of one radial zone (volume average)
 
 settings = [
     { # PURE COLUMN TRANSPORT CASE
@@ -118,6 +127,14 @@ settings = [
     }
     ]
 
+ref_file_names = ['data/CASEMA_reference/ref_2DGRM3Zone_noBnd_1Comp_radZ3.h5',
+                  'data/CASEMA_reference/ref_2DGRM3Zone_dynLin_1Comp_radZ3.h5',
+                  'data/CASEMA_reference/ref_2DGRMsd3Zone_dynLin_1Comp_radZ3.h5',
+                  'data/CASEMA_reference/ref_2DGRM3Zone_reqLin_1Comp_radZ3.h5',
+                  'data/CASEMA_reference/ref_2DGRMsd3Zone_reqLin_1Comp_radZ3.h5',
+                  'data/CASEMA_reference/ref_2DGRM2parType3Zone_1Comp_radZ3.h5' if small_test else 'data/CASEMA_reference/ref_2DGRM4parType3Zone_1Comp_radZ3.h5'
+                  ]
+    
 with project_repo.track_results(results_commit_message=commit_message, debug=rdm_debug_mode):
 
     os.makedirs(output_path, exist_ok=True)
@@ -127,16 +144,20 @@ with project_repo.track_results(results_commit_message=commit_message, debug=rdm
     cadet_configs = []
     config_names = []
     include_sens = []
+    ref_files = []
+    
     if use_CASEMA_reference:
-        ref_files = [['/../../../data/CASEMA_reference/ref_2DGRM3Zone_noBnd_1Comp_radZ3.h5'],
-                     ['/../../../data/CASEMA_reference/ref_2DGRM3Zone_dynLin_1Comp_radZ3.h5'],
-                     ['/../../../data/CASEMA_reference/ref_2DGRM3Zone_reqLin_1Comp_radZ3.h5'],
-                     ['/../../../data/CASEMA_reference/ref_2DGRMsd3Zone_dynLin_1Comp_radZ3.h5'],
-                     ['/../../../data/CASEMA_reference/ref_2DGRMsd3Zone_reqLin_1Comp_radZ3.h5'],
-                     ['/../../../data/CASEMA_reference/ref_2DGRM2parType3Zone_1Comp_radZ3.h5'] if small_test else ['/../../../data/CASEMA_reference/ref_2DGRM4parType3Zone_1Comp_radZ3.h5']
-                     ]
-    else:
-        ref_files = []
+        
+        for idx in range(len(settings)):
+            
+            ref_files.extend(
+                [convergence.get_solution(
+                    str(project_repo.output_path.parent / ref_file_names[idx]), unit='unit_000', which='outlet_port_' + str(target_zone).zfill(3)
+                    )]
+                )
+            
+        ref_files = [ref_files]
+        
     unit_IDs = []
     which = []
     idas_abstol = []
@@ -151,7 +172,7 @@ with project_repo.track_results(results_commit_message=commit_message, debug=rdm
     
     def GRM2D_FV_Benchmark(small_test=False, **kwargs):
 
-        nDisc = 5 if small_test else 7
+        nDisc = 4 if small_test else 6
         nRadialZones=kwargs.get('nRadialZones', 3)
         
         benchmark_config = {
@@ -171,7 +192,7 @@ with project_repo.track_results(results_commit_message=commit_message, debug=rdm
                 '000'
             ],
             'unit_IDs': [
-                str(nRadialZones + 1).zfill(3) if kwargs.get('analytical_reference', 0) else '000'
+                str(nRadialZones + 1 + target_zone).zfill(3) if kwargs.get('analytical_reference', 0) else '000'
             ],
             'which': [
                 'outlet' if kwargs.get('analytical_reference', 0) else 'radial_outlet' # outlet_port_000
