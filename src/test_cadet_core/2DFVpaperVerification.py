@@ -19,6 +19,8 @@ import sys
 from pathlib import Path
 from joblib import Parallel, delayed
 import numpy as np
+import json
+import shutil
 
 from cadet import Cadet
 from cadetrdm import ProjectRepo
@@ -58,7 +60,31 @@ rerun_sims = True
 ### multiple particle types. All settings consider three radial zones.
 
 nRadialZones = 3
-target_zone = 1 # can be 0, 1, 2. Only required for analytical solution: Here, we only consider the solution of one radial zone (volume average)
+n_settings = 6 
+
+references = [None] * n_settings
+
+if use_CASEMA_reference:
+    
+    references = []
+    ref_file_names = ['data/CASEMA_reference/ref_2DGRM3Zone_noBnd_1Comp_radZ3.h5',
+                      'data/CASEMA_reference/ref_2DGRM3Zone_dynLin_1Comp_radZ3.h5',
+                      'data/CASEMA_reference/ref_2DGRMsd3Zone_dynLin_1Comp_radZ3.h5',
+                      'data/CASEMA_reference/ref_2DGRM3Zone_reqLin_1Comp_radZ3.h5',
+                      'data/CASEMA_reference/ref_2DGRMsd3Zone_reqLin_1Comp_radZ3.h5',
+                      'data/CASEMA_reference/ref_2DGRM2parType3Zone_1Comp_radZ3.h5' if small_test else 'data/CASEMA_reference/ref_2DGRM4parType3Zone_1Comp_radZ3.h5'
+                      ]
+    
+    # Note: All zones will be considered when use_CASEMA_reference is true.
+    # We start with the first and compute the other two in a second step.
+    # Finally, we compute a discrete norm of the zonal errors to compute the EOC.
+    for idx in range(n_settings):
+        
+        references.extend(
+            [convergence.get_solution(
+                str(project_repo.output_path.parent / ref_file_names[idx]), unit='unit_000', which='outlet_port_' + str(0).zfill(3)
+                )]
+            )
 
 settings = [
     { # PURE COLUMN TRANSPORT CASE
@@ -68,7 +94,8 @@ settings = [
     'nRadialZones' : 3,
     'name' : '2DGRM3Zone_noBnd_1Comp',
     'adsorption_model' : 'NONE',
-    'par_surfdiffusion' : 0.0
+    'par_surfdiffusion' : 0.0,
+    'reference' : references[0]
     },
     { # 1parType, dynamic binding, no surface diffusion
     'analytical_reference' : use_CASEMA_reference,
@@ -76,7 +103,8 @@ settings = [
     'name' : '2DGRM3Zone_dynLin_1Comp',
     'adsorption_model' : 'LINEAR',
     'adsorption.is_kinetic' : 1,
-    'par_surfdiffusion' : 0.0
+    'par_surfdiffusion' : 0.0,
+    'reference' : references[1]
     },
     { # 1parType, dynamic binding, with surface diffusion
     'analytical_reference' : use_CASEMA_reference,
@@ -84,7 +112,8 @@ settings = [
     'name' : '2DGRMsd3Zone_dynLin_1Comp',
     'adsorption_model' : 'LINEAR',
     'adsorption.is_kinetic' : 1,
-    'par_surfdiffusion' : 1e-11
+    'par_surfdiffusion' : 1e-11,
+    'reference' : references[2]
     },
     { # 1parType, req binding, no surface diffusion
     'analytical_reference' : use_CASEMA_reference,
@@ -94,7 +123,8 @@ settings = [
     'adsorption.is_kinetic' : 0,
     'par_surfdiffusion' : 0.0,
     'init_cp' : [0.0],
-    'init_cs' : [0.0]
+    'init_cs' : [0.0],
+    'reference' : references[3]
     },
     { # 1parType, req binding, with surface diffusion
     'analytical_reference' : use_CASEMA_reference,
@@ -104,7 +134,8 @@ settings = [
     'adsorption.is_kinetic' : 0,
     'par_surfdiffusion' : 1e-11,
     'init_cp' : [0.0],
-    'init_cs' : [0.0]
+    'init_cs' : [0.0],
+    'reference' : references[4]
     },
     { # 4parType: 
     'analytical_reference' : use_CASEMA_reference,
@@ -123,17 +154,11 @@ settings = [
     'adsorption_model' : ['LINEAR', 'LINEAR'] if small_test else ['LINEAR', 'LINEAR', 'NONE', 'LINEAR'],
     'adsorption.is_kinetic' : [0, 1] if small_test else [0, 1, 0, 0],
     'adsorption.lin_ka' : [35.5, 4.5] if small_test else [35.5, 4.5, 0, 0.25],
-    'adsorption.lin_kd' : [1.0, 0.15] if small_test else [1.0, 0.15, 0, 1.0]
+    'adsorption.lin_kd' : [1.0, 0.15] if small_test else [1.0, 0.15, 0, 1.0],
+    'reference' : references[5]
     }
     ]
 
-ref_file_names = ['data/CASEMA_reference/ref_2DGRM3Zone_noBnd_1Comp_radZ3.h5',
-                  'data/CASEMA_reference/ref_2DGRM3Zone_dynLin_1Comp_radZ3.h5',
-                  'data/CASEMA_reference/ref_2DGRMsd3Zone_dynLin_1Comp_radZ3.h5',
-                  'data/CASEMA_reference/ref_2DGRM3Zone_reqLin_1Comp_radZ3.h5',
-                  'data/CASEMA_reference/ref_2DGRMsd3Zone_reqLin_1Comp_radZ3.h5',
-                  'data/CASEMA_reference/ref_2DGRM2parType3Zone_1Comp_radZ3.h5' if small_test else 'data/CASEMA_reference/ref_2DGRM4parType3Zone_1Comp_radZ3.h5'
-                  ]
     
 with project_repo.track_results(results_commit_message=commit_message, debug=rdm_debug_mode):
 
@@ -145,19 +170,6 @@ with project_repo.track_results(results_commit_message=commit_message, debug=rdm
     config_names = []
     include_sens = []
     ref_files = []
-    
-    if use_CASEMA_reference:
-        
-        for idx in range(len(settings)):
-            
-            ref_files.extend(
-                [convergence.get_solution(
-                    str(project_repo.output_path.parent / ref_file_names[idx]), unit='unit_000', which='outlet_port_' + str(target_zone).zfill(3)
-                    )]
-                )
-            
-        ref_files = [ref_files]
-        
     unit_IDs = []
     which = []
     idas_abstol = []
@@ -186,13 +198,13 @@ with project_repo.track_results(results_commit_message=commit_message, debug=rdm
                 False
             ],
             'ref_files': [
-                [None]
+                [kwargs.get('reference', None)]
             ],
             'refinement_ID': [
                 '000'
             ],
-            'unit_IDs': [
-                str(nRadialZones + 1 + target_zone).zfill(3) if kwargs.get('analytical_reference', 0) else '000'
+            'unit_IDs': [ # note that we consider radial zone 0
+                str(nRadialZones + 1 + 0).zfill(3) if kwargs.get('analytical_reference', 0) else '000'
             ],
             'which': [
                 'outlet' if kwargs.get('analytical_reference', 0) else 'radial_outlet' # outlet_port_000
@@ -260,3 +272,112 @@ with project_repo.track_results(results_commit_message=commit_message, debug=rdm
         refinement_IDs=refinement_IDs,
         analytical_reference=settings[0].get('analytical_reference', False)
     )
+    
+    # For the analytical solution, we compute the discrete norm of the errors from each zone
+    if use_CASEMA_reference:
+
+        def copy_json_file(source_file, destination_file):
+            try:
+                # Copy the file
+                shutil.copy(source_file, destination_file)
+            #     print(f"Copied {source_file} to {destination_file}")
+            except FileNotFoundError:
+                print(f"File {source_file} not found!")
+            except Exception as e:
+                print(f"An error occurred: {e}")        
+
+        def rename_json_file(original_file, new_file):
+            
+            # Rename the file
+            try:
+                os.rename(original_file, new_file)
+            #     print(f"Renamed {original_file} to {new_file}")
+            except FileNotFoundError:
+                print(f"File {original_file} not found!")
+            except Exception as e:
+                print(f"An error occurred: {e}")
+        
+        # save old results under new name for corresponding port
+        for idx in range(len(settings)):
+            
+            old_name = str(output_path) + '/convergence_' + settings[idx]['name'] + '.json'
+            new_name = str(output_path) + '/convergence_' + 'port' + str(0).zfill(3) + '_' + settings[idx]['name'] + '.json'
+            rename_json_file(old_name, new_name)
+        
+        for target_zone in range(1, nRadialZones):
+                
+            # calculate results for next port
+            
+            ref_files = [[references[0]], [references[1]], [references[2]],
+                         [references[3]], [references[4]], [references[5]]]
+            
+            bench_func.run_convergence_analysis(
+                database_path=database_path, output_path=output_path,
+                cadet_path=cadet_path,
+                cadet_configs=cadet_configs,
+                cadet_config_names=config_names,
+                include_sens=include_sens,
+                ref_files=ref_files,
+                unit_IDs=unit_IDs,
+                which=which,
+                ax_methods=ax_methods, ax_discs=ax_discs,
+                rad_methods=rad_methods, rad_discs=rad_discs,
+                par_methods=par_methods, par_discs=par_discs,
+                idas_abstol=idas_abstol,
+                n_jobs=n_jobs,
+                rad_inlet_profile=None,
+                rerun_sims=False,
+                refinement_IDs=refinement_IDs,
+                analytical_reference=settings[0].get('analytical_reference', False)
+            )
+                
+            # save new results under new name for corresponding port
+            
+            for idx in range(len(settings)):
+                
+                old_name = str(output_path) + '/convergence_' + settings[idx]['name'] + '.json'
+                new_name = str(output_path) + '/convergence_' + 'port' + str(target_zone).zfill(3) + '_' + settings[idx]['name'] + '.json'
+                rename_json_file(old_name, new_name)
+        
+        # Calculate Discrete Maximum Norm over all radial zones
+        
+        for idx in range(len(settings)):
+            
+            target_name = str(output_path) + '/convergence_' + settings[idx]['name'] + '.json'
+            new_name = str(output_path) + '/convergence_' + 'port000_' + settings[idx]['name'] + '.json'
+            copy_json_file(new_name, target_name)
+            
+            for target_zone in range(nRadialZones):
+        
+                file_name = str(output_path) + '/convergence_' + 'port' + str(target_zone).zfill(3) + '_' + settings[idx]['name'] + '.json'        
+        
+                with open(file_name, "r") as file:
+                    data = json.load(file)
+                    
+                if target_zone == 0:
+                    disc = data['convergence']['FV']['outlet']['$N_e^z$']
+                    maxError = np.array(data['convergence']['FV']['outlet']['Max. error'])
+                    L1Error = np.array(data['convergence']['FV']['outlet']['$L^1$ error'])
+                    L2Error = np.array(data['convergence']['FV']['outlet']['$L^2$ error'])
+                else: # maximum norm
+                    maxError = np.maximum(maxError, np.array(data['convergence']['FV']['outlet']['Max. error']))
+                    L1Error = np.maximum(L1Error, np.array(data['convergence']['FV']['outlet']['$L^1$ error']))
+                    L2Error = np.maximum(L2Error, np.array(data['convergence']['FV']['outlet']['$L^2$ error']))
+                    
+            maxEOC = convergence.calculate_eoc(disc, maxError)
+            L1EOC = convergence.calculate_eoc(disc, L1Error)
+            L2EOC = convergence.calculate_eoc(disc, L2Error)
+                
+            with open(target_name, "r") as file:
+                target_data = json.load(file)
+                
+            target_data['convergence']['FV']['outlet']['Max. error'] = maxError
+            target_data['convergence']['FV']['outlet']['Max. EOC'] = maxEOC
+            target_data['convergence']['FV']['outlet']['$L^1$ error'] = L1Error
+            target_data['convergence']['FV']['outlet']['$L^1$ EOC'] = L1EOC
+            target_data['convergence']['FV']['outlet']['$L^2$ error'] = L2Error
+            target_data['convergence']['FV']['outlet']['$L^2$ EOC'] = L2EOC
+                
+            with open(target_name, "w") as file:
+                json.dump(data, file, indent=4)  # Write with pretty formatting
+        
