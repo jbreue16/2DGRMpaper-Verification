@@ -58,7 +58,7 @@ rerun_sims = True
 ### multiple particle types. All settings consider three radial zones.
 
 nRadialZones = 3
-target_zone = 0 # only required for analytical solution: Here, we only consider the solution of one radial zone (volume average)
+target_zone = 1 # can be 0, 1, 2. Only required for analytical solution: Here, we only consider the solution of one radial zone (volume average)
 
 settings = [
     { # PURE COLUMN TRANSPORT CASE
