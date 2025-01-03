@@ -53,8 +53,8 @@ n_jobs = -1
 # To run the full extensive benchmarks, this needs to be set to false.
 
 small_test = True
-rdm_debug_mode = False
-rerun_sims = True
+rdm_debug_mode = 1
+rerun_sims = 0
 
 #%% We define multiple settings convering binding modes, surface diffusion and
 ### multiple particle types. All settings consider three radial zones.
@@ -380,9 +380,9 @@ with project_repo.track_results(results_commit_message=commit_message, debug=rdm
                     L1Error = np.maximum(L1Error, np.array(data['convergence']['FV']['outlet']['$L^1$ error']))
                     L2Error = np.maximum(L2Error, np.array(data['convergence']['FV']['outlet']['$L^2$ error']))
                     
-            maxEOC = convergence.calculate_eoc(disc, maxError)
-            L1EOC = convergence.calculate_eoc(disc, L1Error)
-            L2EOC = convergence.calculate_eoc(disc, L2Error)
+            maxEOC = np.insert(convergence.calculate_eoc(disc, maxError), 0, 0.0)
+            L1EOC = np.insert(convergence.calculate_eoc(disc, L1Error), 0, 0.0)
+            L2EOC = np.insert(convergence.calculate_eoc(disc, L2Error), 0, 0.0)
                 
             with open(target_name, "r") as file:
                 target_data = json.load(file)
