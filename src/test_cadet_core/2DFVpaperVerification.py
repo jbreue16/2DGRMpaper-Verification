@@ -189,7 +189,7 @@ with project_repo.track_results(results_commit_message=commit_message, debug=rdm
         
         benchmark_config = {
             'cadet_config_jsons': [
-                settings_2Dchromatography.SamDiss_2DVerificationSetting(
+                settings_2Dchromatography.GRM2D_linBnd_benchmark1(
                     radNElem=nRadialZones,
                     rad_inlet_profile=None,
                     USE_MODIFIED_NEWTON=0, axMethod=0, **kwargs)

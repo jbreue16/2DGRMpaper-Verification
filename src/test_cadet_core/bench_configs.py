@@ -702,69 +702,32 @@ def full_chromatography_benchmark(
     return benchmark_config
 
 
-def dg2DLRMP_samsBenchmark(small_test=False, **kwargs):
+def GRM2D_FV_benchmark(small_test=False, **kwargs):
 
+    nDisc = 4 if small_test else 6
+    nRadialZones=kwargs.get('nRadialZones', 3)
+    
     benchmark_config = {
         'cadet_config_jsons': [
-            settings_2Dchromatography.SamDiss_2DVerificationSetting(USE_MODIFIED_NEWTON=1, axMethod=1, **kwargs)
+            settings_2Dchromatography.GRM2D_linBnd_benchmark1(
+                radNElem=nRadialZones,
+                rad_inlet_profile=None,
+                USE_MODIFIED_NEWTON=0, axMethod=0, **kwargs)
         ],
         'include_sens': [
             False
         ],
         'ref_files': [
-            [None]
+            [kwargs.get('reference', None)]
         ],
-        'unit_IDs': [
+        'refinement_ID': [
             '000'
         ],
-        'which': [
-            'radial_outlet' # radial_outlet outlet_port_000
-        ],
-        'idas_abstol': [
-            [1e-10]
-        ],
-        'ax_methods': [
-            [2]
-        ],
-        'ax_discs': [
-            # [[16, 16, 16, 16, 16]]
-            [bench_func.disc_list(4, 6 if not small_test else 4)]
-        ],
-        'rad_methods': [
-            [2]
-        ],
-        'rad_discs': [
-            [bench_func.disc_list(3, 6 if not small_test else 4)]
-        ],
-        'par_methods': [
-            [None]
-        ],
-        'par_discs': [
-            [None]
-        ]
-    }
-
-    return benchmark_config
-
-
-def fv2DLRMP_samsBenchmark(small_test=False, **kwargs):
-
-    benchmark_config = {
-        'cadet_config_jsons': [
-            settings_2Dchromatography.SamDiss_2DVerificationSetting(
-                axMethod=0, parNElem=1, USE_MODIFIED_NEWTON=0, **kwargs)
-        ],
-        'include_sens': [
-            False
-        ],
-        'ref_files': [
-            [None]
-        ],
-        'unit_IDs': [
-            '000'
+        'unit_IDs': [ # note that we consider radial zone 0
+            str(nRadialZones + 1 + 0).zfill(3) if kwargs.get('analytical_reference', 0) else '000'
         ],
         'which': [
-            'radial_outlet' # radial_outlet outlet_port_000
+            'outlet' if kwargs.get('analytical_reference', 0) else 'radial_outlet' # outlet_port_000
         ],
         'idas_abstol': [
             [1e-10]
@@ -773,64 +736,19 @@ def fv2DLRMP_samsBenchmark(small_test=False, **kwargs):
             [0]
         ],
         'ax_discs': [
-            [bench_func.disc_list(4, 6 if not small_test else 3)]
+            [bench_func.disc_list(4, nDisc)]
         ],
         'rad_methods': [
             [0]
         ],
         'rad_discs': [
-            [bench_func.disc_list(3, 6 if not small_test else 3)]
-        ],
-        'par_methods': [
-            [None]
-        ],
-        'par_discs': [
-            [None]
-        ]
-    }
-
-    return benchmark_config
-
-
-def fv2DGRM_samsBenchmark(small_test=False, **kwargs):
-
-    benchmark_config = {
-        'cadet_config_jsons': [
-            settings_2Dchromatography.SamDiss_2DVerificationSetting(
-                axMethod=0, USE_MODIFIED_NEWTON=0, **kwargs)
-        ],
-        'include_sens': [
-            False
-        ],
-        'ref_files': [
-            [None]
-        ],
-        'unit_IDs': [
-            '000'
-        ],
-        'which': [
-            'radial_outlet' # radial_outlet outlet_port_000
-        ],
-        'idas_abstol': [
-            [1e-10]
-        ],
-        'ax_methods': [
-            [0]
-        ],
-        'ax_discs': [
-            [bench_func.disc_list(16, 5 if not small_test else 4)]
-        ],
-        'rad_methods': [
-            [0]
-        ],
-        'rad_discs': [
-            [bench_func.disc_list(3*4, 5 if not small_test else 4)]
+            [bench_func.disc_list(nRadialZones, nDisc)]
         ],
         'par_methods': [
             [0]
         ],
-        'par_discs': [
-            [bench_func.disc_list(4, 5 if not small_test else 4)]
+        'par_discs': [ # same number of particle cells as radial cells
+            [bench_func.disc_list(nRadialZones, nDisc)]
         ]
     }
 

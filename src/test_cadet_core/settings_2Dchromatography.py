@@ -184,7 +184,7 @@ def generate_connections_matrix(rad_method, rad_cells,
 # %% Verification setting from Sams thesis
 
 
-def SamDiss_2DVerificationSetting(
+def GRM2D_linBnd_benchmark1(
         axMethod=0, axNElem=8,
         radMethod=0, radNElem=3,
         parMethod=0, parNElem=2,
@@ -464,92 +464,3 @@ def SamDiss_2DVerificationSetting(
             plt.show()
 
         return model
-
-
-# # %% Example usage
-
-# nRadialZones = 3
-# refinement_level = 3
-
-# axMethod = 0
-# axNElem = 32 * 2**refinement_level
-# radMethod = 0
-# radNElem = 4 * nRadialZones  * 2**refinement_level
-# parMethod = 0
-# parNElem = 1#4 * 2**refinement_level
-# idas_tolerance = 1e-12
-# plot = 30 # None
-# run = True
-# save_path = "C:/Users/jmbr/JupyterNotebooks/"
-# cadet_path = r"C:\Users\jmbr\Cadet_testBuild\CADET_PR2DmodelsDG\out\install\aRELEASE\bin\cadet-cli.exe"
-# file_name = None  # None
-
-# setting_params = {
-
-#     'WRITE_COORDINATES' : 1,
-#     'WRITE_SOLUTION_BULK' : 1,
-#     'WRITE_SOLUTION_OUTLET' : 1,
-
-#     'SPLIT_PORTS_DATA' : 1#,
-
-#     # 'film_diffusion' : 0.0
-
-# }
-
-# config = SamDiss_2DVerificationSetting(
-#     axMethod, axNElem,
-#     radMethod, radNElem,
-#     parMethod, parNElem,
-#     nRadialZones,
-#     idas_tolerance,
-#     plot, run,
-#     save_path,
-#     cadet_path,
-#     file_name,
-#     export_json_config=True,
-#     **setting_params
-# )
-
-# # %% DG Sams example
-
-# nRadialZones = 3
-
-# polyDeg = 3
-
-# axMethod = polyDeg
-# axNElem = 8
-# radMethod = polyDeg
-# radNElem = nRadialZones * 1
-# parMethod = polyDeg
-# parNElem = 1
-# idas_tolerance = 1e-12
-# plot = 30 # None
-# run = True
-# save_path = "C:/Users/jmbr/JupyterNotebooks/"
-# cadet_path = r"C:\Users\jmbr\Cadet_testBuild\CADET_PR2DmodelsDG\out\install\aRELEASE\bin\cadet-cli.exe"
-# file_name = None  # None
-
-# setting_params = {
-
-#     'WRITE_COORDINATES' : 1,
-#     'WRITE_SOLUTION_BULK' : 1,
-#     'WRITE_SOLUTION_OUTLET' : 1,
-
-#     'SPLIT_PORTS_DATA' : 1#,
-
-#     # 'film_diffusion' : 0.0
-# }
-
-# config = SamDiss_VerificationSetting(
-#     axMethod, axNElem,
-#     radMethod, radNElem,
-#     parMethod, parNElem,
-#     nRadialZones,
-#     idas_tolerance,
-#     plot, run,
-#     save_path,
-#     cadet_path,
-#     file_name,
-#     export_json_config=True,
-#     **setting_params
-# )
